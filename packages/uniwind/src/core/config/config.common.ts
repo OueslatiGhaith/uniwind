@@ -1,6 +1,7 @@
 import { Appearance, Platform } from 'react-native'
 import { ColorScheme, StyleDependency, UniwindConfig } from '../../types'
 import { UniwindListener } from '../listener'
+import { CSSVariables, GenerateStyleSheetsCallback } from '../types'
 
 type UserThemes = UniwindConfig extends { themes: infer T extends ReadonlyArray<string> } ? T
     : ReadonlyArray<string>
@@ -10,7 +11,7 @@ export type ThemeName = UserThemes[number]
 const SYSTEM_THEME = 'system' as const
 
 export class UniwindConfigBuilder {
-    private themes = ['light', 'dark']
+    protected themes = ['light', 'dark']
     #hasAdaptiveThemes = true
     #currentTheme = this.colorScheme as ThemeName
 
@@ -79,11 +80,17 @@ export class UniwindConfigBuilder {
         }
     }
 
-    private __reinit(themes: Array<string>) {
+    updateCSSVariables(theme: ThemeName, variables: CSSVariables) {
+        // noop
+        theme
+        variables
+    }
+
+    protected __reinit(_: GenerateStyleSheetsCallback, themes: Array<string>) {
         this.themes = themes
     }
 
-    private onThemeChange() {
+    protected onThemeChange() {
         // noop
     }
 }
