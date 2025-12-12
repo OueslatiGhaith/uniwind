@@ -20,4 +20,4 @@ jobs:
       - name: Close Issue
         run: gh issue close "$NUMBER" --comment "This issue has been automatically closed because it **lacks a clear, minimal reproduction** that we can use to verify the reported bug." --repo "$REPO"
       - name: Label Issue
-        run: gh issue edit "$NUMBER" --add-label "invalid" --repo "$REPO"
+        run: gh issue edit "$NUMBER" --add-label "repro-required" --repo "$REPO"
