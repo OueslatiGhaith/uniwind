@@ -376,6 +376,20 @@
     right: calc(env(safe-area-inset-right) + --value([length], --spacing-*));
 }
 
+@custom-variant disabled {
+    &:disabled {
+        @slot;
+    }
+
+    &[aria-disabled="true"] {
+        @slot;
+    }
+
+    &[readonly] {
+        @slot;
+    }
+}
+
 @custom-variant light {
    &:where(.light, .light *) {
        @slot;
