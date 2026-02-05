@@ -1,0 +1,15 @@
+import { jsx } from "react/jsx-runtime";
+import { KeyboardAvoidingView as RNKeyboardAvoidingView } from "react-native";
+import { copyComponentProperties } from "../utils.js";
+import { toRNWClassName } from "./rnw.js";
+export const KeyboardAvoidingView = copyComponentProperties(RNKeyboardAvoidingView, (props) => {
+  return /* @__PURE__ */ jsx(
+    RNKeyboardAvoidingView,
+    {
+      ...props,
+      style: [toRNWClassName(props.className), props.style],
+      contentContainerStyle: [toRNWClassName(props.contentContainerClassName), props.contentContainerStyle]
+    }
+  );
+});
+export default KeyboardAvoidingView;

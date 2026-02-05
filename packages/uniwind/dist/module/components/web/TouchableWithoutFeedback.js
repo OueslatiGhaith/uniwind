@@ -1,0 +1,14 @@
+import { jsx } from "react/jsx-runtime";
+import { TouchableWithoutFeedback as RNTouchableWithoutFeedback } from "react-native";
+import { copyComponentProperties } from "../utils.js";
+import { toRNWClassName } from "./rnw.js";
+export const TouchableWithoutFeedback = copyComponentProperties(RNTouchableWithoutFeedback, (props) => {
+  return /* @__PURE__ */ jsx(
+    RNTouchableWithoutFeedback,
+    {
+      ...props,
+      style: [toRNWClassName(props.className), props.style]
+    }
+  );
+});
+export default TouchableWithoutFeedback;

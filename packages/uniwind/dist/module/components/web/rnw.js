@@ -1,0 +1,17 @@
+import { Uniwind } from "../../core/index.js";
+import { UniwindListener } from "../../core/listener.js";
+import { StyleDependency } from "../../types.js";
+import "./metro-injected";
+const addClassNameToRoot = () => {
+  if (typeof document === "undefined") {
+    return;
+  }
+  const root = document.documentElement;
+  Uniwind.themes.forEach((theme) => root.classList.remove(theme));
+  root.classList.add(Uniwind.currentTheme);
+};
+UniwindListener.subscribe(() => {
+  addClassNameToRoot();
+}, [StyleDependency.Theme]);
+addClassNameToRoot();
+export const toRNWClassName = (className) => className !== void 0 ? { $$css: true, tailwind: className } : {};

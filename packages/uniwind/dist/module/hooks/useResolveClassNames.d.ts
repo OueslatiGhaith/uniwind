@@ -1,0 +1,2 @@
+import { RNStyle } from '../core/types';
+export declare const useResolveClassNames: (className: string) => RNStyle;

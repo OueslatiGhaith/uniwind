@@ -1,0 +1,1 @@
+export declare const overwrite = "@custom-variant disabled {\n    &:disabled {\n        @slot;\n    }\n\n    &[aria-disabled=\"true\"] {\n        @slot;\n    }\n\n    &[readonly] {\n        @slot;\n    }\n}\n";

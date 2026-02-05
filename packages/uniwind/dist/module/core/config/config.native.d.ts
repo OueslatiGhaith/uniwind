@@ -1,0 +1,12 @@
+import { Insets } from 'react-native';
+import { CSSVariables, GenerateStyleSheetsCallback, ThemeName } from '../types';
+import { UniwindConfigBuilder as UniwindConfigBuilderBase } from './config.common';
+declare class UniwindConfigBuilder extends UniwindConfigBuilderBase {
+    constructor();
+    updateCSSVariables(theme: ThemeName, variables: CSSVariables): void;
+    updateInsets(insets: Insets): void;
+    protected __reinit(generateStyleSheetCallback: GenerateStyleSheetsCallback, themes: Array<string>): void;
+    protected onThemeChange(): void;
+}
+export declare const Uniwind: UniwindConfigBuilder;
+export {};

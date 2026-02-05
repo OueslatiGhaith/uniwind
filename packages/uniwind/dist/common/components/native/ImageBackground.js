@@ -1,0 +1,22 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+module.exports = exports.ImageBackground = void 0;
+var _jsxRuntime = require("react/jsx-runtime");
+var _reactNative = require("react-native");
+var _utils = require("../utils");
+var _useStyle = require("./useStyle");
+const ImageBackground = exports.ImageBackground = (0, _utils.copyComponentProperties)(_reactNative.ImageBackground, props => {
+  const style = (0, _useStyle.useStyle)(props.className, props);
+  const imageStyle = (0, _useStyle.useStyle)(props.imageClassName, props);
+  const tintColor = (0, _useStyle.useStyle)(props.tintColorClassName, props).accentColor;
+  return /* @__PURE__ */(0, _jsxRuntime.jsx)(_reactNative.ImageBackground, {
+    ...props,
+    style: [style, props.style],
+    imageStyle: [imageStyle, props.imageStyle],
+    tintColor: props.tintColor ?? tintColor
+  });
+});
+module.exports = ImageBackground;

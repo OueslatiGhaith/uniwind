@@ -1,0 +1,84 @@
+'use strict';
+
+const isDefined = (value) => value !== null && value !== void 0;
+const toCamelCase = (str) => str.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+const pipe = (data) => ((...fns) => fns.reduce((acc, fn) => fn(acc), data));
+const isNumber = (data) => {
+  if (typeof data === "number") {
+    return true;
+  }
+  if (typeof data === "string" && data !== "") {
+    return !isNaN(Number(data));
+  }
+  return false;
+};
+const smartSplit = (str, separator = " ") => {
+  const escaper = "&&&";
+  return pipe(str)(
+    (x) => x.replace(/\s\?\?\s/g, `${escaper}??${escaper}`),
+    (x) => x.replace(/\s([+\-*/])\s/g, `${escaper}$1${escaper}`),
+    (x) => x.split(separator),
+    (x) => x.map((token) => token.replace(new RegExp(escaper, "g"), " "))
+  );
+};
+const addMissingSpaces = (str) => pipe(str)(
+  (x) => x.trim(),
+  (x) => x.replace(/([^ {])this/g, "$1 this"),
+  (x) => x.replace(/\](?=\d)/g, "] "),
+  (x) => x.replace(/\)(?=\S)/g, ") "),
+  (x) => x.replace(/(?<!^)(?<!\s)"(?=\d)/g, '" ')
+);
+const uniq = (arr) => Array.from(new Set(arr));
+const isValidJSValue = (jsValueString) => {
+  try {
+    new Function(`const test = ${jsValueString}`);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const shouldBeSerialized = (value) => {
+  if (value.includes("-")) {
+    return value.split("-").some(shouldBeSerialized);
+  }
+  return [
+    isNumber(value),
+    value.startsWith("this["),
+    value.startsWith("rt."),
+    /[*/+-]/.test(value),
+    value.includes('"'),
+    value.includes(" "),
+    value === "(",
+    value === ")"
+  ].some(Boolean);
+};
+const roundToPrecision = (value, precision) => parseFloat(value.toFixed(precision));
+const deepEqual = (a, b) => {
+  if (Object.is(a, b)) {
+    return true;
+  }
+  if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) {
+    return false;
+  }
+  const keysA = Object.keys(a);
+  if (keysA.length !== Object.keys(b).length) {
+    return false;
+  }
+  return keysA.every((key) => deepEqual(a[key], b[key]) && Object.prototype.hasOwnProperty.call(b, key));
+};
+const removeKeys = (obj, keysToRemove) => Object.fromEntries(
+  Object.entries(obj).filter(([key]) => !keysToRemove.includes(key))
+);
+
+exports.addMissingSpaces = addMissingSpaces;
+exports.deepEqual = deepEqual;
+exports.isDefined = isDefined;
+exports.isNumber = isNumber;
+exports.isValidJSValue = isValidJSValue;
+exports.pipe = pipe;
+exports.removeKeys = removeKeys;
+exports.roundToPrecision = roundToPrecision;
+exports.shouldBeSerialized = shouldBeSerialized;
+exports.smartSplit = smartSplit;
+exports.toCamelCase = toCamelCase;
+exports.uniq = uniq;

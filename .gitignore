@@ -2,6 +2,5 @@ node_modules/
 .DS_Store
 *.pem
 *.tsbuildinfo
-dist
 .turbo
 .vscode

@@ -1,0 +1,22 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+module.exports = exports.FlatList = void 0;
+var _jsxRuntime = require("react/jsx-runtime");
+var _reactNative = require("react-native");
+var _utils = require("../utils");
+var _rnw = require("./rnw");
+const FlatList = exports.FlatList = (0, _utils.copyComponentProperties)(_reactNative.FlatList, props => {
+  const hasSingleColumn = !("numColumns" in props) || props.numColumns === 1;
+  return /* @__PURE__ */(0, _jsxRuntime.jsx)(_reactNative.FlatList, {
+    ...props,
+    style: [(0, _rnw.toRNWClassName)(props.className), props.style],
+    columnWrapperStyle: hasSingleColumn ? void 0 : [(0, _rnw.toRNWClassName)(props.columnWrapperClassName), props.columnWrapperStyle],
+    contentContainerStyle: [(0, _rnw.toRNWClassName)(props.contentContainerClassName), props.contentContainerStyle],
+    ListFooterComponentStyle: [(0, _rnw.toRNWClassName)(props.ListFooterComponentClassName), props.ListFooterComponentStyle],
+    ListHeaderComponentStyle: [(0, _rnw.toRNWClassName)(props.ListHeaderComponentClassName), props.ListHeaderComponentStyle]
+  });
+});
+module.exports = FlatList;

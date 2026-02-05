@@ -1,0 +1,17 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+module.exports = exports.Pressable = void 0;
+var _jsxRuntime = require("react/jsx-runtime");
+var _reactNative = require("react-native");
+var _utils = require("../utils");
+var _rnw = require("./rnw");
+const Pressable = exports.Pressable = (0, _utils.copyComponentProperties)(_reactNative.Pressable, props => {
+  return /* @__PURE__ */(0, _jsxRuntime.jsx)(_reactNative.Pressable, {
+    ...props,
+    style: state => [(0, _rnw.toRNWClassName)(props.className), typeof props.style === "function" ? props.style(state) : props.style]
+  });
+});
+module.exports = Pressable;

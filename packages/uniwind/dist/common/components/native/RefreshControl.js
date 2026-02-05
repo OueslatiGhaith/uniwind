@@ -1,0 +1,26 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+module.exports = exports.RefreshControl = void 0;
+var _jsxRuntime = require("react/jsx-runtime");
+var _reactNative = require("react-native");
+var _utils = require("../utils");
+var _useStyle = require("./useStyle");
+const RefreshControl = exports.RefreshControl = (0, _utils.copyComponentProperties)(_reactNative.RefreshControl, props => {
+  const style = (0, _useStyle.useStyle)(props.className, props);
+  const color = (0, _useStyle.useStyle)(props.colorsClassName, props).accentColor;
+  const tintColor = (0, _useStyle.useStyle)(props.tintColorClassName, props).accentColor;
+  const titleColor = (0, _useStyle.useStyle)(props.titleColorClassName, props).accentColor;
+  const progressBackgroundColor = (0, _useStyle.useStyle)(props.progressBackgroundColorClassName, props).accentColor;
+  return /* @__PURE__ */(0, _jsxRuntime.jsx)(_reactNative.RefreshControl, {
+    ...props,
+    style: [style, props.style],
+    colors: props.colors ?? (color !== void 0 ? [color] : void 0),
+    tintColor: props.tintColor ?? tintColor,
+    titleColor: props.titleColor ?? titleColor,
+    progressBackgroundColor: props.progressBackgroundColor ?? progressBackgroundColor
+  });
+});
+module.exports = RefreshControl;

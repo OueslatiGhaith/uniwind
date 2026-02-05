@@ -1,0 +1,17 @@
+import { jsx } from "react/jsx-runtime";
+import { VirtualizedList as RNVirtualizedList } from "react-native";
+import { copyComponentProperties } from "../utils.js";
+import { toRNWClassName } from "./rnw.js";
+export const VirtualizedList = copyComponentProperties(RNVirtualizedList, (props) => {
+  return /* @__PURE__ */ jsx(
+    RNVirtualizedList,
+    {
+      ...props,
+      style: [toRNWClassName(props.className), props.style],
+      contentContainerStyle: [toRNWClassName(props.contentContainerClassName), props.contentContainerStyle],
+      ListFooterComponentStyle: [toRNWClassName(props.ListFooterComponentClassName), props.ListFooterComponentStyle],
+      ListHeaderComponentStyle: [toRNWClassName(props.ListHeaderComponentClassName), props.ListHeaderComponentStyle]
+    }
+  );
+});
+export default VirtualizedList;
