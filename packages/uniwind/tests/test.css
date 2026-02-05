@@ -11,3 +11,35 @@
   --color-bar: oklch(var(--bar));
   --spacing-test: 123px;
 }
+
+/* Group variants */
+.group:active .group-active-bg-red-500 {
+  background-color: #fb2c36;
+}
+
+.group[data-active="true"] .group-data-active-true-bg-red-500 {
+  background-color: #fb2c36;
+}
+
+.group\/card[data-active="true"] .group-data-active-true-card-bg-red-500 {
+  background-color: #fb2c36;
+}
+
+/* Has variants */
+.has-data-active-true-bg-blue-500:has([data-active="true"]) {
+  background-color: #2b7fff;
+}
+
+/* Group Has variants */
+.group:has([data-active="true"]) .group-has-data-active-true-bg-green-500 {
+  background-color: #00c950;
+}
+
+/* Named Group isolation */
+.group\/other[data-active="true"] .group-data-active-true-other-bg-yellow-500 {
+  background-color: #f0b100;
+}
+
+.group[data-id="outer"] .group-data-id-outer-bg-red-500 {
+  background-color: #fb2c36;
+}

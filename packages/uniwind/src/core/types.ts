@@ -18,6 +18,8 @@ export type Style = {
     focus: boolean | null
     disabled: boolean | null
     dataAttributes: Record<string, string> | null
+    group: GroupCondition | null
+    has: Record<string, string> | null
 }
 
 export type StyleSheets = Record<string, Array<Style>>
@@ -89,6 +91,15 @@ export type ComponentState = {
     isPressed?: boolean
     isDisabled?: boolean
     isFocused?: boolean
+}
+
+export type GroupCondition = {
+    name: string
+    active?: boolean
+    focus?: boolean
+    disabled?: boolean
+    dataAttributes?: Record<string, string>
+    has?: Record<string, string>
 }
 
 export type CSSVariables = Record<string, string | number>
