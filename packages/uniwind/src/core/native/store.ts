@@ -2,7 +2,8 @@
 import { Dimensions, Platform } from 'react-native'
 import { Orientation, StyleDependency } from '../../types'
 import { UniwindListener } from '../listener'
-import { ComponentState, CSSVariables, GenerateStyleSheetsCallback, RNStyle, Style, StyleSheets, ThemeName } from '../types'
+import { ComponentState, CSSVariables, GenerateStyleSheetsCallback, GroupCondition, RNStyle, Style, StyleSheets, ThemeName } from '../types'
+import { GroupContextType } from './groupContext'
 import { cloneWithAccessors } from './native-utils'
 import { parseBoxShadow, parseFontVariant, parseTextShadowMutation, parseTransformsMutation, resolveGradient } from './parsers'
 import { UniwindRuntime } from './runtime'
@@ -11,9 +12,12 @@ type StylesResult = {
     styles: RNStyle
     dependencies: Array<StyleDependency>
     dependencySum: number
+    hasDataAttributes: boolean
+    hasGroup: boolean
+    hasHas: boolean
 }
 
-const emptyState: StylesResult = { styles: {}, dependencies: [], dependencySum: 0 }
+const emptyState: StylesResult = { styles: {}, dependencies: [], dependencySum: 0, hasDataAttributes: false, hasGroup: false, hasHas: false }
 
 class UniwindStoreBuilder {
     runtime = UniwindRuntime
@@ -23,7 +27,13 @@ class UniwindStoreBuilder {
     private cache = new Map<string, StylesResult>()
     private generateStyleSheetCallbackResult: ReturnType<GenerateStyleSheetsCallback> | null = null
 
-    getStyles(className: string | undefined, componentProps?: Record<string, any>, state?: ComponentState): StylesResult {
+    getStyles(
+        className: string | undefined,
+        componentProps?: Record<string, any>,
+        state?: ComponentState,
+        groupContext?: GroupContextType,
+        childrenProps?: Array<Record<string, any>>,
+    ): StylesResult {
         if (className === undefined || className === '') {
             return emptyState
         }
@@ -34,10 +44,10 @@ class UniwindStoreBuilder {
             return this.cache.get(cacheKey)!
         }
 
-        const result = this.resolveStyles(className, componentProps, state)
+        const result = this.resolveStyles(className, componentProps, state, groupContext, childrenProps)
 
-        // Don't cache styles that depend on data attributes
-        if (!result.hasDataAttributes) {
+        // Don't cache styles that depend on data attributes, groups or has selectors
+        if (!result.hasDataAttributes && !result.hasGroup && !result.hasHas) {
             this.cache.set(cacheKey, result)
             UniwindListener.subscribe(
                 () => this.cache.delete(cacheKey),
@@ -83,10 +93,18 @@ class UniwindStoreBuilder {
         }
     }
 
-    private resolveStyles(classNames: string, componentProps?: Record<string, any>, state?: ComponentState) {
+    private resolveStyles(
+        classNames: string,
+        componentProps?: Record<string, any>,
+        state?: ComponentState,
+        groupContext?: GroupContextType,
+        childrenProps?: Array<Record<string, any>>,
+    ) {
         const result = {} as Record<string, any>
         let vars = this.vars
         let hasDataAttributes = false
+        let hasGroup = false
+        let hasHas = false
         const dependencies = new Set<StyleDependency>()
         let dependencySum = 0
         const bestBreakpoints = new Map<string, Style>()
@@ -108,6 +126,14 @@ class UniwindStoreBuilder {
                     hasDataAttributes = true
                 }
 
+                if (style.group !== null) {
+                    hasGroup = true
+                }
+
+                if (style.has !== null) {
+                    hasHas = true
+                }
+
                 if (
                     style.minWidth > this.runtime.screen.width
                     || style.maxWidth < this.runtime.screen.width
@@ -118,6 +144,8 @@ class UniwindStoreBuilder {
                     || (style.focus !== null && state?.isFocused !== style.focus)
                     || (style.disabled !== null && state?.isDisabled !== style.disabled)
                     || (style.dataAttributes !== null && !this.validateDataAttributes(style.dataAttributes, componentProps))
+                    || (style.group !== null && !this.validateGroup(style.group, groupContext))
+                    || (style.has !== null && !this.validateHas(style.has, childrenProps))
                 ) {
                     continue
                 }
@@ -231,7 +259,53 @@ class UniwindStoreBuilder {
             dependencies: Array.from(dependencies),
             dependencySum,
             hasDataAttributes,
+            hasGroup,
+            hasHas,
         }
+    }
+
+    private validateGroup(groupCondition: GroupCondition, groupContext: GroupContextType = {}) {
+        const groupStates = groupContext[groupCondition.name]
+
+        if (!groupStates || groupStates.length === 0) {
+            return false
+        }
+
+        return groupStates.some(groupState => {
+            if (groupCondition.active !== undefined && groupState.isPressed !== groupCondition.active) {
+                return false
+            }
+            if (groupCondition.focus !== undefined && groupState.isFocused !== groupCondition.focus) {
+                return false
+            }
+            if (groupCondition.disabled !== undefined && groupState.isDisabled !== groupCondition.disabled) {
+                return false
+            }
+
+            if (groupCondition.dataAttributes !== undefined) {
+                if (!this.validateDataAttributes(groupCondition.dataAttributes, groupState.dataAttributes)) {
+                    return false
+                }
+            }
+
+            if (groupCondition.has !== undefined) {
+                if (!this.validateHas(groupCondition.has, groupState.childrenProps)) {
+                    return false
+                }
+            }
+
+            return true
+        })
+    }
+
+    private validateHas(hasCondition: Record<string, string>, childrenProps: Array<Record<string, any>> = []) {
+        for (const childProps of childrenProps) {
+            if (this.validateDataAttributes(hasCondition, childProps)) {
+                return true
+            }
+        }
+
+        return false
     }
 
     private validateDataAttributes(dataAttributes: Record<string, string>, props: Record<string, any> = {}) {

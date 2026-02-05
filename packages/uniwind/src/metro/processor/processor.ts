@@ -1,4 +1,5 @@
 import { Declaration, MediaQuery, Rule, transform } from 'lightningcss'
+import { GroupCondition } from '../../core/types'
 import { Polyfills, ProcessMetaValues } from '../types'
 import { Color } from './color'
 import { CSS } from './css'
@@ -52,6 +53,8 @@ export class ProcessorBuilder {
             focus: null as boolean | null,
             disabled: null as boolean | null,
             dataAttributes: null as Record<string, string> | null,
+            group: null as GroupCondition | null,
+            has: null as Record<string, any> | null,
         })
     }
 
@@ -89,6 +92,8 @@ export class ProcessorBuilder {
             style.focus = this.declarationConfig.focus
             style.disabled = this.declarationConfig.disabled
             style.dataAttributes = this.declarationConfig.dataAttributes
+            style.group = this.declarationConfig.group
+            style.has = this.declarationConfig.has
             this.meta.className = this.declarationConfig.className
         }
 
@@ -120,109 +125,134 @@ export class ProcessorBuilder {
     }
 
     private parseRuleRec(rule: Rule<Declaration, MediaQuery>) {
-        if (this.declarationConfig.className !== null) {
-            const lastStyle = this.stylesheets[this.declarationConfig.className]?.at(-1)
-
-            if (lastStyle !== undefined && Object.keys(lastStyle).length > 0) {
-                this.stylesheets[this.declarationConfig.className]?.push({})
-            }
-        }
-
         if (rule.type === 'style') {
             rule.value.selectors.forEach(selector => {
-                const [maybeClassNameSelector] = selector
-                const newClassName = maybeClassNameSelector?.type === 'class' ? maybeClassNameSelector.name : undefined
+                const previousConfig = {
+                    ...this.declarationConfig,
+                    mediaQueries: [...this.declarationConfig.mediaQueries],
+                }
 
-                if (newClassName !== undefined) {
-                    this.declarationConfig.className = newClassName
-                    this.stylesheets[newClassName] ??= []
-                    this.stylesheets[newClassName].push({})
+                let targetClassName = null as string | null
+                // Find the target class name (last class in selector)
+                selector.forEach(token => {
+                    if (token.type === 'class') {
+                        targetClassName = token.name
+                    }
+                })
+
+                if (targetClassName !== null) {
+                    this.declarationConfig.className = targetClassName
+                }
+
+                if (this.declarationConfig.className !== null) {
+                    let rtl = null as boolean | null
+                    let theme = null as string | null
+                    let active = null as boolean | null
+                    let focus = null as boolean | null
+                    let disabled = null as boolean | null
+                    let dataAttributes = null as Record<string, string> | null
+                    let group = null as GroupCondition | null
+                    let has = null as Record<string, any> | null
+
+                    let currentPartIsGroup = false
+                    selector.forEach(token => {
+                        if (token.type === 'class') {
+                            if (token.name.startsWith('group')) {
+                                if (token.name !== targetClassName) {
+                                    group ??= { name: JSON.stringify(token.name) }
+                                    currentPartIsGroup = true
+                                }
+                            }
+
+                            if (this.themes.includes(token.name)) {
+                                theme = token.name
+                            }
+                        }
+
+                        if (token.type === 'pseudo-class') {
+                            if (token.kind === 'active') {
+                                if (currentPartIsGroup) group!.active = true
+                                else active = true
+                            } else if (token.kind === 'focus') {
+                                if (currentPartIsGroup) group!.focus = true
+                                else focus = true
+                            } else if (token.kind === 'disabled') {
+                                if (currentPartIsGroup) group!.disabled = true
+                                else disabled = true
+                            } else if (token.kind === 'dir') {
+                                rtl = token.direction === 'rtl'
+                            } else if (token.kind === 'where') {
+                                token.selectors.forEach(s =>
+                                    s.forEach(t => {
+                                        if (t.type === 'class' && this.themes.includes(t.name)) theme = t.name
+                                        if (t.type === 'pseudo-class' && t.kind === 'dir') rtl = t.direction === 'rtl'
+                                    })
+                                )
+                            } else if (token.kind === 'has') {
+                                token.selectors.forEach(s =>
+                                    s.forEach(t => {
+                                        if (t.type === 'attribute' && t.name.startsWith('data-')) {
+                                            if (currentPartIsGroup) {
+                                                group!.has ??= {}
+                                                group!.has[t.name] = t.operation?.operator === 'equal' ? JSON.stringify(t.operation.value) : '"true"'
+                                            } else {
+                                                has ??= {}
+                                                has[t.name] = t.operation?.operator === 'equal' ? JSON.stringify(t.operation.value) : '"true"'
+                                            }
+                                        }
+                                    })
+                                )
+                            }
+                        }
+
+                        if (token.type === 'attribute' && token.name.startsWith('data-')) {
+                            const val = token.operation?.operator === 'equal' ? JSON.stringify(token.operation.value) : '"true"'
+                            if (currentPartIsGroup) {
+                                group!.dataAttributes ??= {}
+                                group!.dataAttributes[token.name] = val
+                            } else {
+                                dataAttributes ??= {}
+                                dataAttributes[token.name] = val
+                            }
+                        }
+
+                        if (token.type === 'combinator') {
+                            currentPartIsGroup = false
+                        }
+                    })
+
+                    const hasNewVariants = [rtl, theme, active, focus, disabled, dataAttributes, group, has].some(v => v !== null)
+
+                    if (targetClassName !== null || hasNewVariants) {
+                        this.stylesheets[this.declarationConfig.className] ??= []
+                        this.stylesheets[this.declarationConfig.className]?.push({})
+                    }
+
+                    if (rtl !== null) this.declarationConfig.rtl = rtl
+                    if (theme !== null) this.declarationConfig.theme = theme
+                    if (active !== null) this.declarationConfig.active = active
+                    if (focus !== null) this.declarationConfig.focus = focus
+                    if (disabled !== null) this.declarationConfig.disabled = disabled
+                    if (dataAttributes !== null) this.declarationConfig.dataAttributes = dataAttributes
+                    if (group !== null) this.declarationConfig.group = group
+                    if (has !== null) this.declarationConfig.has = has
 
                     rule.value.declarations?.declarations?.forEach(declaration => this.addDeclaration(declaration))
                     rule.value.declarations?.importantDeclarations?.forEach(declaration => this.addDeclaration(declaration, true))
                     rule.value.rules?.forEach(rule => this.parseRuleRec(rule))
+                } else {
+                    selector.forEach(token => {
+                        if (token.type === 'pseudo-class' && token.kind === 'root') {
+                            this.declarationConfig.root = true
 
-                    return
+                            rule.value.declarations?.declarations?.forEach(declaration => this.addDeclaration(declaration))
+                            rule.value.declarations?.importantDeclarations?.forEach(declaration => this.addDeclaration(declaration, true))
+                            rule.value.rules?.forEach(rule => this.parseRuleRec(rule))
+                        }
+                    })
                 }
 
-                let rtl = null as boolean | null
-                let theme = null as string | null
-                let active = null as boolean | null
-                let focus = null as boolean | null
-                let disabled = null as boolean | null
-                let dataAttributes = null as Record<string, string> | null
-
-                selector.forEach(selector => {
-                    if (selector.type === 'pseudo-class' && selector.kind === 'where') {
-                        selector.selectors.forEach(selector => {
-                            selector.forEach(selector => {
-                                if (selector.type === 'class' && this.themes.includes(selector.name)) {
-                                    theme = selector.name
-                                }
-
-                                if (selector.type === 'pseudo-class' && selector.kind === 'dir') {
-                                    rtl = selector.direction === 'rtl'
-                                }
-                            })
-                        })
-                    }
-
-                    if (selector.type === 'pseudo-class' && selector.kind === 'active') {
-                        active = true
-                    }
-
-                    if (selector.type === 'pseudo-class' && selector.kind === 'focus') {
-                        focus = true
-                    }
-
-                    if (selector.type === 'pseudo-class' && selector.kind === 'disabled') {
-                        disabled = true
-                    }
-
-                    // data-x
-                    if (selector.type === 'attribute' && selector.operation === null && selector.name.startsWith('data-')) {
-                        dataAttributes ??= {}
-                        dataAttributes[selector.name] = `"true"`
-                    }
-
-                    // data-x=
-                    if (selector.type === 'attribute' && selector.operation?.operator === 'equal' && selector.name.startsWith('data-')) {
-                        dataAttributes ??= {}
-                        dataAttributes[selector.name] = `"${selector.operation.value}"`
-                    }
-                })
-
-                if ([rtl, theme, active, focus, disabled, dataAttributes].some(Boolean)) {
-                    this.declarationConfig.rtl = rtl
-                    this.declarationConfig.theme = theme
-                    this.declarationConfig.active = active
-                    this.declarationConfig.focus = focus
-                    this.declarationConfig.disabled = disabled
-                    this.declarationConfig.dataAttributes = dataAttributes
-
-                    rule.value.declarations?.declarations?.forEach(declaration => this.addDeclaration(declaration))
-                    rule.value.declarations?.importantDeclarations?.forEach(declaration => this.addDeclaration(declaration, true))
-                    rule.value.rules?.forEach(rule => this.parseRuleRec(rule))
-
-                    this.declarationConfig.rtl = null
-                    this.declarationConfig.theme = null
-                    this.declarationConfig.active = null
-                    this.declarationConfig.focus = null
-                    this.declarationConfig.disabled = null
-                    this.declarationConfig.dataAttributes = null
-
-                    return
-                }
-
-                selector.forEach(selectorToken => {
-                    if (selectorToken.type === 'pseudo-class' && selectorToken.kind === 'root') {
-                        this.declarationConfig.root = true
-
-                        rule.value.declarations?.declarations?.forEach(declaration => this.addDeclaration(declaration))
-                        rule.value.declarations?.importantDeclarations?.forEach(declaration => this.addDeclaration(declaration, true))
-                        rule.value.rules?.forEach(rule => this.parseRuleRec(rule))
-                    }
-                })
+                this.declarationConfig = previousConfig
             })
 
             return
@@ -236,12 +266,14 @@ export class ProcessorBuilder {
 
         if (rule.type === 'media') {
             const { mediaQueries } = rule.value.query
+            const previousConfig = {
+                ...this.declarationConfig,
+                mediaQueries: [...this.declarationConfig.mediaQueries],
+            }
 
             this.declarationConfig.mediaQueries.push(...mediaQueries)
-            rule.value.rules.forEach(rule => {
-                this.parseRuleRec(rule)
-                this.declarationConfig = this.getDeclarationConfig()
-            })
+            rule.value.rules.forEach(rule => this.parseRuleRec(rule))
+            this.declarationConfig = previousConfig
 
             return
         }
