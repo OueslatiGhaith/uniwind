@@ -133,9 +133,19 @@ export class ProcessorBuilder {
                 }
 
                 let targetClassName = null as string | null
-                // Find the target class name (last class in selector)
+                let rtl = null as boolean | null
+                let theme = null as string | null
+                let active = null as boolean | null
+                let focus = null as boolean | null
+                let disabled = null as boolean | null
+                let dataAttributes = null as Record<string, string> | null
+                let group = null as GroupCondition | null
+                let has = null as Record<string, any> | null
+                let isRoot = false
+
+                // 1. Identify targetClassName (ignoring themes)
                 selector.forEach(token => {
-                    if (token.type === 'class') {
+                    if (token.type === 'class' && !this.themes.includes(token.name)) {
                         targetClassName = token.name
                     }
                 })
@@ -144,99 +154,99 @@ export class ProcessorBuilder {
                     this.declarationConfig.className = targetClassName
                 }
 
-                if (this.declarationConfig.className !== null) {
-                    let rtl = null as boolean | null
-                    let theme = null as string | null
-                    let active = null as boolean | null
-                    let focus = null as boolean | null
-                    let disabled = null as boolean | null
-                    let dataAttributes = null as Record<string, string> | null
-                    let group = null as GroupCondition | null
-                    let has = null as Record<string, any> | null
-
-                    let currentPartIsGroup = false
-                    selector.forEach(token => {
-                        if (token.type === 'class') {
-                            if (token.name.startsWith('group')) {
-                                if (token.name !== targetClassName) {
-                                    group ??= { name: JSON.stringify(token.name) }
-                                    currentPartIsGroup = true
-                                }
-                            }
-
-                            if (this.themes.includes(token.name)) {
-                                theme = token.name
+                // 2. Identify variants and global markers
+                let currentPartIsGroup = false
+                selector.forEach(token => {
+                    if (token.type === 'class') {
+                        if (token.name.startsWith('group')) {
+                            if (token.name !== targetClassName) {
+                                group ??= { name: JSON.stringify(token.name) }
+                                currentPartIsGroup = true
                             }
                         }
 
-                        if (token.type === 'pseudo-class') {
-                            if (token.kind === 'active') {
-                                if (currentPartIsGroup) group!.active = true
-                                else active = true
-                            } else if (token.kind === 'focus') {
-                                if (currentPartIsGroup) group!.focus = true
-                                else focus = true
-                            } else if (token.kind === 'disabled') {
-                                if (currentPartIsGroup) group!.disabled = true
-                                else disabled = true
-                            } else if (token.kind === 'dir') {
-                                rtl = token.direction === 'rtl'
-                            } else if (token.kind === 'where') {
-                                token.selectors.forEach(s =>
-                                    s.forEach(t => {
-                                        if (t.type === 'class' && this.themes.includes(t.name)) theme = t.name
-                                        if (t.type === 'pseudo-class' && t.kind === 'dir') rtl = t.direction === 'rtl'
-                                    })
-                                )
-                            } else if (token.kind === 'has') {
-                                token.selectors.forEach(s =>
-                                    s.forEach(t => {
-                                        if (t.type === 'attribute' && t.name.startsWith('data-')) {
-                                            if (currentPartIsGroup) {
-                                                group!.has ??= {}
-                                                group!.has[t.name] = t.operation?.operator === 'equal' ? JSON.stringify(t.operation.value) : '"true"'
-                                            } else {
-                                                has ??= {}
-                                                has[t.name] = t.operation?.operator === 'equal' ? JSON.stringify(t.operation.value) : '"true"'
-                                            }
+                        if (this.themes.includes(token.name)) {
+                            theme = token.name
+                        }
+                    }
+
+                    if (token.type === 'pseudo-class') {
+                        if (token.kind === 'root') {
+                            isRoot = true
+                        } else if (token.kind === 'active') {
+                            if (currentPartIsGroup) group!.active = true
+                            else active = true
+                        } else if (token.kind === 'focus') {
+                            if (currentPartIsGroup) group!.focus = true
+                            else focus = true
+                        } else if (token.kind === 'disabled') {
+                            if (currentPartIsGroup) group!.disabled = true
+                            else disabled = true
+                        } else if (token.kind === 'dir') {
+                            rtl = token.direction === 'rtl'
+                        } else if (token.kind === 'where') {
+                            token.selectors.forEach(s =>
+                                s.forEach(t => {
+                                    if (t.type === 'class' && this.themes.includes(t.name)) theme = t.name
+                                    if (t.type === 'pseudo-class' && t.kind === 'dir') rtl = t.direction === 'rtl'
+                                })
+                            )
+                        } else if (token.kind === 'has') {
+                            token.selectors.forEach(s =>
+                                s.forEach(t => {
+                                    if (t.type === 'attribute' && t.name.startsWith('data-')) {
+                                        if (currentPartIsGroup) {
+                                            group!.has ??= {}
+                                            group!.has[t.name] = t.operation?.operator === 'equal' ? JSON.stringify(t.operation.value) : '"true"'
+                                        } else {
+                                            has ??= {}
+                                            has[t.name] = t.operation?.operator === 'equal' ? JSON.stringify(t.operation.value) : '"true"'
                                         }
-                                    })
-                                )
-                            }
+                                    }
+                                })
+                            )
                         }
+                    }
 
-                        if (token.type === 'attribute' && token.name.startsWith('data-')) {
-                            const val = token.operation?.operator === 'equal' ? JSON.stringify(token.operation.value) : '"true"'
-                            if (currentPartIsGroup) {
-                                group!.dataAttributes ??= {}
-                                group!.dataAttributes[token.name] = val
-                            } else {
-                                dataAttributes ??= {}
-                                dataAttributes[token.name] = val
-                            }
+                    if (token.type === 'attribute' && token.name.startsWith('data-')) {
+                        const val = token.operation?.operator === 'equal' ? JSON.stringify(token.operation.value) : '"true"'
+                        if (currentPartIsGroup) {
+                            group!.dataAttributes ??= {}
+                            group!.dataAttributes[token.name] = val
+                        } else {
+                            dataAttributes ??= {}
+                            dataAttributes[token.name] = val
                         }
+                    }
 
-                        if (token.type === 'combinator') {
-                            currentPartIsGroup = false
-                        }
-                    })
+                    if (token.type === 'combinator') {
+                        currentPartIsGroup = false
+                    }
+                })
 
+                if (rtl !== null) this.declarationConfig.rtl = rtl
+                if (theme !== null) this.declarationConfig.theme = theme
+                if (active !== null) this.declarationConfig.active = active
+                if (focus !== null) this.declarationConfig.focus = focus
+                if (disabled !== null) this.declarationConfig.disabled = disabled
+                if (dataAttributes !== null) this.declarationConfig.dataAttributes = dataAttributes
+                if (group !== null) this.declarationConfig.group = group
+                if (has !== null) this.declarationConfig.has = has
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                if (isRoot) this.declarationConfig.root = true
+
+                if (this.declarationConfig.className !== null) {
                     const hasNewVariants = [rtl, theme, active, focus, disabled, dataAttributes, group, has].some(v => v !== null)
 
                     if (targetClassName !== null || hasNewVariants) {
                         this.stylesheets[this.declarationConfig.className] ??= []
-                        this.stylesheets[this.declarationConfig.className]?.push({})
+                        this.stylesheets[this.declarationConfig.className]!.push({})
                     }
 
-                    if (rtl !== null) this.declarationConfig.rtl = rtl
-                    if (theme !== null) this.declarationConfig.theme = theme
-                    if (active !== null) this.declarationConfig.active = active
-                    if (focus !== null) this.declarationConfig.focus = focus
-                    if (disabled !== null) this.declarationConfig.disabled = disabled
-                    if (dataAttributes !== null) this.declarationConfig.dataAttributes = dataAttributes
-                    if (group !== null) this.declarationConfig.group = group
-                    if (has !== null) this.declarationConfig.has = has
-
+                    rule.value.declarations?.declarations?.forEach(declaration => this.addDeclaration(declaration))
+                    rule.value.declarations?.importantDeclarations?.forEach(declaration => this.addDeclaration(declaration, true))
+                    rule.value.rules?.forEach(rule => this.parseRuleRec(rule))
+                } else if (this.declarationConfig.root || theme !== null) {
                     rule.value.declarations?.declarations?.forEach(declaration => this.addDeclaration(declaration))
                     rule.value.declarations?.importantDeclarations?.forEach(declaration => this.addDeclaration(declaration, true))
                     rule.value.rules?.forEach(rule => this.parseRuleRec(rule))
